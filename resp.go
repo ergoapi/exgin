@@ -68,6 +68,10 @@ func GinsAbort(c *gin.Context, msg string, args ...interface{}) {
 	c.AbortWithStatusJSON(200, resperror(10400, fmt.Sprintf(msg, args...)))
 }
 
+func GinsAbortWithCode(c *gin.Context, respcode int, msg string, args ...interface{}) {
+	c.AbortWithStatusJSON(respcode, resperror(10400, fmt.Sprintf(msg, args...)))
+}
+
 func Bind(c *gin.Context, ptr interface{}) {
 	err := c.ShouldBindJSON(ptr)
 	if err != nil {
