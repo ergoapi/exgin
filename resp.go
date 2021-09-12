@@ -32,7 +32,7 @@ func respdone(data interface{}) gin.H {
 }
 
 // error error
-func resperror(code int64, data interface{}) gin.H {
+func resperror(code int, data interface{}) gin.H {
 	return gin.H{
 		"data":      nil,
 		"message":   data,
@@ -69,7 +69,11 @@ func GinsAbort(c *gin.Context, msg string, args ...interface{}) {
 }
 
 func GinsAbortWithCode(c *gin.Context, respcode int, msg string, args ...interface{}) {
-	c.AbortWithStatusJSON(respcode, resperror(10400, fmt.Sprintf(msg, args...)))
+	c.AbortWithStatusJSON(200, resperror(respcode, fmt.Sprintf(msg, args...)))
+}
+
+func GinsCustomResp(c *gin.Context, obj interface{}) {
+	c.JSON(200, obj)
 }
 
 func Bind(c *gin.Context, ptr interface{}) {

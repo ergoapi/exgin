@@ -14,8 +14,18 @@
 package exgin
 
 import (
+	"fmt"
+	"net"
 	"net/http"
+	"net/http/httputil"
+	"os"
+	"runtime/debug"
+	"strings"
+	"time"
 
+	"github.com/ergoapi/errors"
+	"github.com/ergoapi/util/ztime"
+	"github.com/ergoapi/zlog"
 	"github.com/gin-gonic/gin"
 )
 
@@ -42,70 +52,69 @@ func ExCors() gin.HandlerFunc {
 }
 
 // ExLog exlog middleware
-// func ExLog() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		start := time.Now()
-// 		path := c.Request.URL.Path
-// 		query := c.Request.URL.RawQuery
-// 		c.Next()
-// 		end := time.Now()
-// 		latency := end.Sub(start)
-// 		if len(query) == 0 {
-// 			query = " - "
-// 		}
-// 		if latency > time.Second*1 {
-// 			zlog.Warn("[msg] api %v query %v", path, latency)
-// 		}
-// 		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
-// 			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v <= err: %v", rid.GetRID(c), color.SRed("%v", c.Writer.Status()), c.ClientIP(), c.Request.Method, path, query, latency, c.Errors.String())
-// 			zlog.Warn(msg)
-// 			go file.Writefile(fmt.Sprintf("/tmp/%v.errreq.txt", ztime.NowDay()), msg)
-// 		} else {
-// 			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v ", rid.GetRID(c), color.SGreen("%v", c.Writer.Status()), c.ClientIP(), c.Request.Method, path, query, latency)
-// 		}
-// 	}
-// }
+func ExLog() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
+		c.Next()
+		end := time.Now()
+		latency := end.Sub(start)
+		if len(query) == 0 {
+			query = " - "
+		}
+		if latency > time.Second*1 {
+			zlog.Warn("[msg] api %v query %v", path, latency)
+		}
+		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
+			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v <= err: %v", GetRID(c), c.Writer.Status(), c.ClientIP(), c.Request.Method, path, query, latency, c.Errors.String())
+			zlog.Warn(msg)
+		} else {
+			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v ", GetRID(c), c.Writer.Status(), c.ClientIP(), c.Request.Method, path, query, latency)
+		}
+	}
+}
 
 // Exrecovery recovery
-// func Exrecovery() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		defer func() {
-// 			if err := recover(); err != nil {
-// 				if res, ok := err.(gerr.GinsError); ok {
-// 					engine.GinsData(c, nil, fmt.Errorf(res.Message))
-// 					c.Abort()
-// 					return
-// 				}
-// 				var brokenPipe bool
-// 				if ne, ok := err.(*net.OpError); ok {
-// 					if se, ok := ne.Err.(*os.SyscallError); ok {
-// 						if strings.Contains(strings.ToLower(se.Error()), "broken pipe") || strings.Contains(strings.ToLower(se.Error()), "connection reset by peer") {
-// 							brokenPipe = true
-// 						}
-// 					}
-// 				}
+func Exrecovery() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if err := recover(); err != nil {
+				if res, ok := err.(errors.ErgoError); ok {
+					GinsData(c, nil, fmt.Errorf(res.Message))
+					c.Abort()
+					return
+				}
+				var brokenPipe bool
+				if ne, ok := err.(*net.OpError); ok {
+					if se, ok := ne.Err.(*os.SyscallError); ok {
+						if strings.Contains(strings.ToLower(se.Error()), "broken pipe") || strings.Contains(strings.ToLower(se.Error()), "connection reset by peer") {
+							brokenPipe = true
+						}
+					}
+				}
 
-// 				httpRequest, _ := httputil.DumpRequest(c.Request, false)
-// 				if brokenPipe {
-// 					zlog.Error("Recovery from brokenPipe ---> path: %v, err: %v, request: %v", c.Request.URL.Path, err, string(httpRequest))
-// 					c.AbortWithStatusJSON(200, gin.H{
-// 						"data":      nil,
-// 						"message":   "请求broken",
-// 						"timestamp": ztime.NowUnix(),
-// 						"code":      10500,
-// 					})
-// 				} else {
-// 					zlog.Error("Recovery from panic ---> err: %v, request: %v, stack: %v", err, string(httpRequest), string(debug.Stack()))
-// 					c.AbortWithStatusJSON(200, gin.H{
-// 						"data":      nil,
-// 						"message":   "请求panic",
-// 						"timestamp": ztime.NowUnix(),
-// 						"code":      10500,
-// 					})
-// 				}
-// 				return
-// 			}
-// 		}()
-// 		c.Next()
-// 	}
-// }
+				httpRequest, _ := httputil.DumpRequest(c.Request, false)
+				if brokenPipe {
+					zlog.Error("Recovery from brokenPipe ---> path: %v, err: %v, request: %v", c.Request.URL.Path, err, string(httpRequest))
+					c.AbortWithStatusJSON(200, gin.H{
+						"data":      nil,
+						"message":   "请求broken",
+						"timestamp": ztime.NowUnix(),
+						"code":      10500,
+					})
+				} else {
+					zlog.Error("Recovery from panic ---> err: %v, request: %v, stack: %v", err, string(httpRequest), string(debug.Stack()))
+					c.AbortWithStatusJSON(200, gin.H{
+						"data":      nil,
+						"message":   "请求panic",
+						"timestamp": ztime.NowUnix(),
+						"code":      10500,
+					})
+				}
+				return
+			}
+		}()
+		c.Next()
+	}
+}
