@@ -22,13 +22,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const headerXRequestID = "X-Request-ID"
-
-// GetRID 获取ID
-func GetRID(c *gin.Context) string {
-	return c.Writer.Header().Get(headerXRequestID)
-}
-
 // GinsQueryStr query string
 func GinsQueryStr(c *gin.Context, key string, defaultval ...string) string {
 	val := c.Query(key)

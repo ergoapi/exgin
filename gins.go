@@ -14,31 +14,23 @@
 package exgin
 
 import (
+	"github.com/ergoapi/util/zos"
 	"github.com/gin-gonic/gin"
+	"github.com/google/gops/agent"
 )
 
 // Init init gin engine
 func Init(debug bool) *gin.Engine {
-	// status := false
-	// if len(debug) == 1 {
-	// 	status = debug[0]
-	// }
-	// if status || zos.IsMacOS() {
-	// 	gin.SetMode(gin.DebugMode)
-	// } else {
-	// 	gin.SetMode(gin.ReleaseMode)
-	// }
-	// if zos.IsLinux() {
-	// 	go agent.Listen(agent.Options{
-	// 		Addr:            "0.0.0.0:8848",
-	// 		ShutdownCleanup: true})
-	// }
 	gin.DisableConsoleColor()
 	if debug {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
-
+	if !zos.IsMacOS() {
+		go agent.Listen(agent.Options{
+			Addr:            "0.0.0.0:18848",
+			ShutdownCleanup: true})
+	}
 	return gin.New()
 }

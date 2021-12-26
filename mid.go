@@ -29,6 +29,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const headerXRequestID = "X-Request-ID"
+
+// GetRID 获取ID
+func GetRID(c *gin.Context) string {
+	return c.Writer.Header().Get(headerXRequestID)
+}
+
 // ExCors excors middleware
 func ExCors() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -67,16 +74,16 @@ func ExLog() gin.HandlerFunc {
 			zlog.Warn("[msg] api %v query %v", path, latency)
 		}
 		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
-			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v <= err: %v", GetRID(c), c.Writer.Status(), c.ClientIP(), c.Request.Method, path, query, latency, c.Errors.String())
+			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v <= err: %v", GetRID(c), c.Writer.Status(), RealIP(c), c.Request.Method, path, query, latency, c.Errors.String())
 			zlog.Warn(msg)
 		} else {
-			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v ", GetRID(c), c.Writer.Status(), c.ClientIP(), c.Request.Method, path, query, latency)
+			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v ", GetRID(c), c.Writer.Status(), RealIP(c), c.Request.Method, path, query, latency)
 		}
 	}
 }
 
-// Exrecovery recovery
-func Exrecovery() gin.HandlerFunc {
+// ExRecovery recovery
+func ExRecovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -117,4 +124,12 @@ func Exrecovery() gin.HandlerFunc {
 		}()
 		c.Next()
 	}
+}
+
+func RealIP(c *gin.Context) string {
+	xff := c.Writer.Header().Get("X-Forwarded-For")
+	if xff == "" {
+		return c.ClientIP()
+	}
+	return xff
 }
