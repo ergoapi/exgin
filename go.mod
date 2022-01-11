@@ -6,7 +6,7 @@ require (
 	github.com/6tail/lunar-go v1.2.11 // indirect
 	github.com/ergoapi/errors v0.0.1
 	github.com/ergoapi/util v0.1.4
-	github.com/ergoapi/zlog v0.0.1
+	github.com/ergoapi/zlog v0.0.2
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-playground/validator/v10 v10.9.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -15,7 +15,6 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/ugorji/go v1.2.6 // indirect
-	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
