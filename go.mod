@@ -3,9 +3,8 @@ module github.com/ergoapi/exgin
 go 1.16
 
 require (
-	github.com/6tail/lunar-go v1.2.11 // indirect
 	github.com/ergoapi/errors v0.0.1
-	github.com/ergoapi/util v0.1.4
+	github.com/ergoapi/util v0.1.9
 	github.com/ergoapi/zlog v0.0.2
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-playground/validator/v10 v10.9.0 // indirect
