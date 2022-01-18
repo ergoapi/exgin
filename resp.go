@@ -22,12 +22,12 @@ import (
 )
 
 // done done
-func respdone(data interface{}) gin.H {
+func respdone(code int, data interface{}) gin.H {
 	return gin.H{
 		"data":      data,
 		"message":   "请求成功",
 		"timestamp": ztime.NowUnix(),
-		"code":      200,
+		"code":      code,
 	}
 }
 
@@ -43,7 +43,7 @@ func resperror(code int, data interface{}) gin.H {
 
 func renderMessage(c *gin.Context, v interface{}) {
 	if v == nil {
-		c.JSON(200, respdone(nil))
+		c.JSON(200, respdone(200, nil))
 		return
 	}
 
@@ -57,11 +57,29 @@ func renderMessage(c *gin.Context, v interface{}) {
 
 func GinsData(c *gin.Context, data interface{}, err error) {
 	if err == nil {
-		c.JSON(200, respdone(data))
+		c.JSON(200, respdone(200, data))
 		return
 	}
 
 	renderMessage(c, err.Error())
+}
+
+func GinsCodeData(c *gin.Context, code int, data interface{}, err error) {
+	if err == nil {
+		c.JSON(200, respdone(code, data))
+		return
+	}
+
+	renderMessage(c, err.Error())
+}
+
+func GinsErrorData(c *gin.Context, code int, data interface{}, err error) {
+	c.JSON(200, gin.H{
+		"data":      data,
+		"message":   fmt.Sprintf("%v", err),
+		"timestamp": ztime.NowUnix(),
+		"code":      code,
+	})
 }
 
 func GinsAbort(c *gin.Context, msg string, args ...interface{}) {
@@ -74,6 +92,10 @@ func GinsAbortWithCode(c *gin.Context, respcode int, msg string, args ...interfa
 
 func GinsCustomResp(c *gin.Context, obj interface{}) {
 	c.JSON(200, obj)
+}
+
+func GinsCustomCodeResp(c *gin.Context, code int, obj interface{}) {
+	c.JSON(code, obj)
 }
 
 func Bind(c *gin.Context, ptr interface{}) {
