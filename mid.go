@@ -82,6 +82,35 @@ func ExLog() gin.HandlerFunc {
 	}
 }
 
+// ExSkipHealthLog exlog skip health middleware
+func ExSkipHealthLog(skip ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
+		c.Next()
+		for _, s := range skip {
+			if s == path {
+				return
+			}
+		}
+		end := time.Now()
+		latency := end.Sub(start)
+		if len(query) == 0 {
+			query = " - "
+		}
+		if latency > time.Second*1 {
+			zlog.Warn("[msg] api %v query %v", path, latency)
+		}
+		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
+			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v <= err: %v", GetRID(c), c.Writer.Status(), RealIP(c), c.Request.Method, path, query, latency, c.Errors.String())
+			zlog.Warn(msg)
+		} else {
+			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v ", GetRID(c), c.Writer.Status(), RealIP(c), c.Request.Method, path, query, latency)
+		}
+	}
+}
+
 // ExRecovery recovery
 func ExRecovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
