@@ -86,7 +86,10 @@ func ExLog() gin.HandlerFunc {
 func ExSkipHealthLog(skip ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
+		host := c.Request.URL.Host
 		path := c.Request.URL.Path
+		method := c.Request.Method
+		ua := c.Request.UserAgent()
 		query := c.Request.URL.RawQuery
 		c.Next()
 		for _, s := range skip {
@@ -103,10 +106,10 @@ func ExSkipHealthLog(skip ...string) gin.HandlerFunc {
 			zlog.Warn("[msg] api %v query %v", path, latency)
 		}
 		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
-			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v <= err: %v", GetRID(c), c.Writer.Status(), RealIP(c), c.Request.Method, path, query, latency, c.Errors.String())
+			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v | %v | %v <= err: %v", GetRID(c), c.Writer.Status(), RealIP(c), ua, method, host, path, query, latency, c.Errors.String())
 			zlog.Warn(msg)
 		} else {
-			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v ", GetRID(c), c.Writer.Status(), RealIP(c), c.Request.Method, path, query, latency)
+			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v | %v | %v ", GetRID(c), c.Writer.Status(), RealIP(c), ua, method, host, path, query, latency)
 		}
 	}
 }
