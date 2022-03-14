@@ -59,34 +59,10 @@ func ExCors() gin.HandlerFunc {
 }
 
 // ExLog exlog middleware
-func ExLog() gin.HandlerFunc {
+func ExLog(skip ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		path := c.Request.URL.Path
-		query := c.Request.URL.RawQuery
-		c.Next()
-		end := time.Now()
-		latency := end.Sub(start)
-		if len(query) == 0 {
-			query = " - "
-		}
-		if latency > time.Second*1 {
-			zlog.Warn("[msg] api %v query %v", path, latency)
-		}
-		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
-			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v <= err: %v", GetRID(c), c.Writer.Status(), RealIP(c), c.Request.Method, path, query, latency, c.Errors.String())
-			zlog.Warn(msg)
-		} else {
-			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v ", GetRID(c), c.Writer.Status(), RealIP(c), c.Request.Method, path, query, latency)
-		}
-	}
-}
-
-// ExSkipHealthLog exlog skip health middleware
-func ExSkipHealthLog(skip ...string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		start := time.Now()
-		host := c.Request.URL.Host
+		host := Host(c)
 		path := c.Request.URL.Path
 		method := c.Request.Method
 		ua := c.Request.UserAgent()
@@ -102,15 +78,21 @@ func ExSkipHealthLog(skip ...string) gin.HandlerFunc {
 		if len(query) == 0 {
 			query = " - "
 		}
-		if latency > time.Second*1 {
+		if latency > defaultGinSlowThreshold {
 			zlog.Warn("[msg] api %v query %v", path, latency)
 		}
+		statuscode := c.Writer.Status()
+		bodysize := c.Writer.Size()
 		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
-			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v | %v | %v <= err: %v", GetRID(c), c.Writer.Status(), RealIP(c), ua, method, host, path, query, latency, c.Errors.String())
+			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v | %v | %v | %v  <= err: %v", GetRID(c), statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua, c.Errors.String())
 			zlog.Warn(msg)
 		} else {
-			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v | %v | %v ", GetRID(c), c.Writer.Status(), RealIP(c), ua, method, host, path, query, latency)
+			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v | %v | %v | %v", GetRID(c), statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua)
 		}
+		// update prom
+		labels := []string{fmt.Sprint(statuscode), path, method}
+		promGinReqCount.WithLabelValues(labels...).Inc()
+		promGinReqLatency.WithLabelValues(labels...).Observe(latency.Seconds())
 	}
 }
 
@@ -164,4 +146,12 @@ func RealIP(c *gin.Context) string {
 		return c.ClientIP()
 	}
 	return xff
+}
+
+func Host(c *gin.Context) string {
+	h := c.Request.Host
+	if h == "" {
+		return c.Request.URL.Host
+	}
+	return h
 }

@@ -14,9 +14,38 @@
 package exgin
 
 import (
+	"time"
+
 	"github.com/ergoapi/util/zos"
 	"github.com/gin-gonic/gin"
 	"github.com/google/gops/agent"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	promNamespace = "exgin"
+	promGinLabels = []string{
+		"status_code",
+		"path",
+		"method",
+	}
+	promGinReqCount = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: promNamespace,
+			Name:      "req_count",
+			Help:      "gin server request count",
+		}, promGinLabels,
+	)
+	promGinReqLatency = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: promNamespace,
+			Name:      "req_latency",
+			Help:      "gin server request latency in seconds",
+		}, promGinLabels,
+	)
+	// 默认慢请求时间 3s
+	defaultGinSlowThreshold = time.Second * 3
 )
 
 // Init init gin engine
