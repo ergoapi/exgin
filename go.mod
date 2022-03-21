@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/ergoapi/errors v0.0.1
-	github.com/ergoapi/util v0.2.2
+	github.com/ergoapi/util v0.2.7
 	github.com/ergoapi/zlog v0.0.3
 	github.com/gin-gonic/gin v1.7.7
 	github.com/google/gops v0.3.22
