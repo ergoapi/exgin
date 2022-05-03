@@ -14,9 +14,7 @@
 package exgin
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/ergoapi/errors"
 	"github.com/gin-gonic/gin"
@@ -133,9 +131,4 @@ func GinsOffset(c *gin.Context, limit int) int {
 // GinsHeader header key
 func GinsHeader(c *gin.Context, headerkey string) string {
 	return c.GetHeader(headerkey)
-}
-
-func GinsHeadrUrl(c *gin.Context) string {
-	url := c.Request.URL.Path
-	return fmt.Sprintf("%v.me", strings.Split(url, ".me/")[0])
 }

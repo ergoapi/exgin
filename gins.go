@@ -14,13 +14,16 @@
 package exgin
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/ergoapi/util/zos"
+	"github.com/ergoapi/util/exnet"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/google/gops/agent"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -48,18 +51,52 @@ var (
 	defaultGinSlowThreshold = time.Second * 3
 )
 
-// Init init gin engine
-func Init(debug bool) *gin.Engine {
+type Config struct {
+	Debug       bool
+	Gops        bool
+	GopsPath    string
+	Pprof       bool
+	PprofPath   string
+	Cors        bool
+	Metrics     bool
+	MetricsPath string
+}
+
+func (c *Config) GinSet(r *gin.Engine) {
 	gin.DisableConsoleColor()
-	if debug {
+	if c.Debug {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	if !zos.IsMacOS() {
+	if c.Cors {
+		r.Use(ExCors())
+	}
+	if c.Gops {
+		if c.GopsPath == "" {
+			c.GopsPath = "0.0.0.0:32388"
+		}
 		go agent.Listen(agent.Options{
-			Addr:            "0.0.0.0:18848",
+			Addr:            c.GopsPath,
 			ShutdownCleanup: true})
 	}
-	return gin.New()
+	if c.Pprof {
+		if c.PprofPath == "" {
+			c.PprofPath = fmt.Sprintf("/hostdebug/%v/entry", exnet.LocalIPs()[0])
+		}
+		pprof.Register(r, c.PprofPath)
+	}
+	if c.Metrics {
+		if c.MetricsPath == "" {
+			c.MetricsPath = "/metrics"
+		}
+		r.GET(c.MetricsPath, gin.WrapH(promhttp.Handler()))
+	}
+}
+
+// Init init gin engine
+func Init(c *Config) *gin.Engine {
+	r := gin.New()
+	c.GinSet(r)
+	return r
 }

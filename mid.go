@@ -27,14 +27,8 @@ import (
 	"github.com/ergoapi/util/ztime"
 	"github.com/ergoapi/zlog"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
-
-const headerXRequestID = "X-Request-ID"
-
-// GetRID 获取ID
-func GetRID(c *gin.Context) string {
-	return c.Writer.Header().Get(headerXRequestID)
-}
 
 // ExCors excors middleware
 func ExCors() gin.HandlerFunc {
@@ -58,8 +52,8 @@ func ExCors() gin.HandlerFunc {
 	}
 }
 
-// ExLog exlog middleware
-func ExLog(skip ...string) gin.HandlerFunc {
+// ExZLog exzlog middleware
+func ExZLog(skip ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		host := Host(c)
@@ -84,10 +78,10 @@ func ExLog(skip ...string) gin.HandlerFunc {
 		statuscode := c.Writer.Status()
 		bodysize := c.Writer.Size()
 		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
-			msg := fmt.Sprintf("requestid %v => %v | %v | %v | %v | %v | %v | %v | %v | %v  <= err: %v", GetRID(c), statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua, c.Errors.String())
+			msg := fmt.Sprintf("requestid %v =>  %v | %v | %v | %v | %v | %v | %v | %v  <= err: %v", statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua, c.Errors.String())
 			zlog.Warn(msg)
 		} else {
-			zlog.Info("requestid %v => %v | %v | %v | %v | %v | %v | %v | %v | %v", GetRID(c), statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua)
+			zlog.Info("requestid %v =>  %v | %v | %v | %v | %v | %v | %v | %v", statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua)
 		}
 		// update prom
 		labels := []string{fmt.Sprint(statuscode), path, method}
@@ -96,8 +90,8 @@ func ExLog(skip ...string) gin.HandlerFunc {
 	}
 }
 
-// ExRecovery recovery
-func ExRecovery() gin.HandlerFunc {
+// ExZRecovery zlog recovery
+func ExZRecovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -126,6 +120,87 @@ func ExRecovery() gin.HandlerFunc {
 					})
 				} else {
 					zlog.Error("Recovery from panic ---> err: %v, request: %v, stack: %v", err, string(httpRequest), string(debug.Stack()))
+					c.AbortWithStatusJSON(200, gin.H{
+						"data":      nil,
+						"message":   "请求panic",
+						"timestamp": ztime.NowUnix(),
+						"code":      10500,
+					})
+				}
+				return
+			}
+		}()
+		c.Next()
+	}
+}
+
+// ExLLog ex logrus middleware
+func ExLLog(skip ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		host := Host(c)
+		path := c.Request.URL.Path
+		method := c.Request.Method
+		ua := c.Request.UserAgent()
+		query := c.Request.URL.RawQuery
+		c.Next()
+		for _, s := range skip {
+			if strings.HasPrefix(path, s) {
+				return
+			}
+		}
+		end := time.Now()
+		latency := end.Sub(start)
+		if len(query) == 0 {
+			query = " - "
+		}
+		if latency > defaultGinSlowThreshold {
+			logrus.Warnf("[msg] api %v query %v", path, latency)
+		}
+		statuscode := c.Writer.Status()
+		bodysize := c.Writer.Size()
+		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
+			logrus.Warnf("requestid %v =>  %v | %v | %v | %v | %v | %v | %v | %v  <= err: %v", statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua, c.Errors.String())
+		} else {
+			logrus.Infof("requestid %v =>  %v | %v | %v | %v | %v | %v | %v | %v", statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua)
+		}
+		// update prom
+		labels := []string{fmt.Sprint(statuscode), path, method}
+		promGinReqCount.WithLabelValues(labels...).Inc()
+		promGinReqLatency.WithLabelValues(labels...).Observe(latency.Seconds())
+	}
+}
+
+// ExLRecovery logrus recovery
+func ExLRecovery() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if err := recover(); err != nil {
+				if res, ok := err.(errors.ErgoError); ok {
+					GinsData(c, nil, fmt.Errorf(res.Message))
+					c.Abort()
+					return
+				}
+				var brokenPipe bool
+				if ne, ok := err.(*net.OpError); ok {
+					if se, ok := ne.Err.(*os.SyscallError); ok {
+						if strings.Contains(strings.ToLower(se.Error()), "broken pipe") || strings.Contains(strings.ToLower(se.Error()), "connection reset by peer") {
+							brokenPipe = true
+						}
+					}
+				}
+
+				httpRequest, _ := httputil.DumpRequest(c.Request, false)
+				if brokenPipe {
+					logrus.Errorf("Recovery from brokenPipe ---> path: %v, err: %v, request: %v", c.Request.URL.Path, err, string(httpRequest))
+					c.AbortWithStatusJSON(200, gin.H{
+						"data":      nil,
+						"message":   "请求broken",
+						"timestamp": ztime.NowUnix(),
+						"code":      10500,
+					})
+				} else {
+					logrus.Errorf("Recovery from panic ---> err: %v, request: %v, stack: %v", err, string(httpRequest), string(debug.Stack()))
 					c.AbortWithStatusJSON(200, gin.H{
 						"data":      nil,
 						"message":   "请求panic",
