@@ -8,7 +8,7 @@ require (
 	github.com/ergoapi/zlog v0.0.3
 	github.com/gin-contrib/pprof v1.3.0
 	github.com/gin-gonic/gin v1.7.7
-	github.com/google/gops v0.3.22
+	github.com/google/gops v0.3.23
 	github.com/prometheus/client_golang v1.12.1
 	github.com/sirupsen/logrus v1.8.1
 )
