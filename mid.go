@@ -24,10 +24,12 @@ import (
 	"time"
 
 	"github.com/ergoapi/errors"
+	"github.com/ergoapi/util/exid"
 	"github.com/ergoapi/util/ztime"
-	"github.com/ergoapi/zlog"
+	"github.com/ergoapi/zlog/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 // ExCors excors middleware
@@ -61,6 +63,7 @@ func ExZLog(skip ...string) gin.HandlerFunc {
 		method := c.Request.Method
 		ua := c.Request.UserAgent()
 		query := c.Request.URL.RawQuery
+		log := zlog.GetLogger().GetCtx(c.Request.Context())
 		c.Next()
 		for _, s := range skip {
 			if s == path {
@@ -73,20 +76,54 @@ func ExZLog(skip ...string) gin.HandlerFunc {
 			query = " - "
 		}
 		if latency > defaultGinSlowThreshold {
-			zlog.Warn("[msg] api %v query %v", path, latency)
+			log.Warn("api query slow", zap.String("path", path), zap.String("latency", time.Duration(latency).String()))
 		}
 		statuscode := c.Writer.Status()
 		bodysize := c.Writer.Size()
+		log.Info("api query", zap.String("path", path), zap.String("method", method), zap.String("host", host), zap.String("ua", ua), zap.String("query", query), zap.Int("status", statuscode), zap.Int("bodysize", bodysize), zap.String("latency", time.Duration(latency).String()))
 		if len(c.Errors) > 0 || c.Writer.Status() >= 500 {
-			msg := fmt.Sprintf("requestid %v =>  %v | %v | %v | %v | %v | %v | %v | %v  <= err: %v", statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua, c.Errors.String())
-			zlog.Warn(msg)
+			log.Warn("api error query",
+				zap.String("path", path),
+				zap.String("method", method),
+				zap.String("host", host),
+				zap.String("ua", ua),
+				zap.String("ip", RealIP(c)),
+				zap.String("query", query),
+				zap.Int("status", statuscode),
+				zap.Int("bodysize", bodysize),
+				zap.String("latency", time.Duration(latency).String()),
+				zap.String("err", c.Errors.String()))
 		} else {
-			zlog.Info("requestid %v =>  %v | %v | %v | %v | %v | %v | %v | %v", statuscode, bodysize, RealIP(c), method, host, path, query, latency, ua)
+			log.Info("api custom query",
+				zap.String("path", path),
+				zap.String("method", method),
+				zap.String("host", host),
+				zap.String("ua", ua),
+				zap.String("ip", RealIP(c)),
+				zap.String("query", query),
+				zap.Int("status", statuscode),
+				zap.Int("bodysize", bodysize),
+				zap.String("latency", time.Duration(latency).String()))
 		}
+
 		// update prom
 		labels := []string{fmt.Sprint(statuscode), path, method}
 		promGinReqCount.WithLabelValues(labels...).Inc()
 		promGinReqLatency.WithLabelValues(labels...).Observe(latency.Seconds())
+	}
+}
+
+func ExZTraceID() gin.HandlerFunc {
+	return func(g *gin.Context) {
+		traceId := g.GetHeader("X-Trace-Id")
+		if traceId == "" {
+			traceId = exid.GenUUID()
+			g.Header("X-Trace-Id", traceId)
+		}
+		ctx, log := zlog.GetLogger().AddCtx(g.Request.Context(), zap.Any("traceId", traceId))
+		log.Info("add traceId")
+		g.Request = g.Request.WithContext(ctx)
+		g.Next()
 	}
 }
 
@@ -111,7 +148,7 @@ func ExZRecovery() gin.HandlerFunc {
 
 				httpRequest, _ := httputil.DumpRequest(c.Request, false)
 				if brokenPipe {
-					zlog.Error("Recovery from brokenPipe ---> path: %v, err: %v, request: %v", c.Request.URL.Path, err, string(httpRequest))
+					zlog.GetLogger().Error("Recovery from brokenPipe", zap.String("path", c.Request.URL.Path), zap.Any("error", err), zap.String("request", string(httpRequest)))
 					c.AbortWithStatusJSON(200, gin.H{
 						"data":      nil,
 						"message":   "请求broken",
@@ -119,7 +156,7 @@ func ExZRecovery() gin.HandlerFunc {
 						"code":      10500,
 					})
 				} else {
-					zlog.Error("Recovery from panic ---> err: %v, request: %v, stack: %v", err, string(httpRequest), string(debug.Stack()))
+					zlog.GetLogger().Error("Recovery from panic", zap.String("path", c.Request.URL.Path), zap.Any("error", err), zap.String("stack", string(debug.Stack())), zap.String("request", string(httpRequest)))
 					c.AbortWithStatusJSON(200, gin.H{
 						"data":      nil,
 						"message":   "请求panic",

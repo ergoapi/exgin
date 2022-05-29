@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/ergoapi/exgin"
-	"github.com/ergoapi/zlog"
+	"github.com/ergoapi/zlog/v2"
 )
 
 func init() {
@@ -19,6 +19,7 @@ func main() {
 		Metrics: true,
 	}
 	g := exgin.Init(&cfg)
+	g.Use(exgin.ExZTraceID())
 	g.Use(exgin.ExZLog())
 	g.Use(exgin.ExZRecovery())
 	g.Use(exgin.ExCors())
