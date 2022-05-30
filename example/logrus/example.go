@@ -20,6 +20,7 @@ func main() {
 		Gops:    true,
 	}
 	g := exgin.Init(&cfg)
+	g.Use(exgin.ExLTraceID())
 	g.Use(exgin.ExLLog("/metrics"))
 	g.Use(exgin.ExLRecovery())
 	g.Run()

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/ergoapi/errors"
+	ltrace "github.com/ergoapi/llog/hooks/trace"
 	"github.com/ergoapi/util/exid"
 	"github.com/ergoapi/util/ztime"
 	"github.com/ergoapi/zlog/v2"
@@ -120,8 +121,7 @@ func ExZTraceID() gin.HandlerFunc {
 			traceId = exid.GenUUID()
 			g.Header("X-Trace-Id", traceId)
 		}
-		ctx, log := zlog.GetLogger().AddCtx(g.Request.Context(), zap.Any("traceId", traceId))
-		log.Info("add traceId")
+		ctx, _ := zlog.GetLogger().AddCtx(g.Request.Context(), zap.Any("traceId", traceId))
 		g.Request = g.Request.WithContext(ctx)
 		g.Next()
 	}
@@ -168,6 +168,18 @@ func ExZRecovery() gin.HandlerFunc {
 			}
 		}()
 		c.Next()
+	}
+}
+
+func ExLTraceID() gin.HandlerFunc {
+	return func(g *gin.Context) {
+		traceId := g.GetHeader("X-Trace-Id")
+		if traceId == "" {
+			traceId = exid.GenUUID()
+			g.Header("X-Trace-Id", traceId)
+		}
+		logrus.AddHook(ltrace.NewTraceIdHook(traceId))
+		g.Next()
 	}
 }
 
