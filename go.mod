@@ -9,7 +9,7 @@ require (
 	github.com/ergoapi/zlog/v2 v2.0.1
 	github.com/gin-contrib/pprof v1.3.0
 	github.com/gin-gonic/gin v1.8.0
-	github.com/google/gops v0.3.23
+	github.com/google/gops v0.3.24
 	github.com/prometheus/client_golang v1.12.2
 	github.com/sirupsen/logrus v1.8.1
 	go.uber.org/zap v1.21.0
