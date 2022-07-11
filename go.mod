@@ -7,8 +7,8 @@ require (
 	github.com/ergoapi/llog v0.0.0-20220530000200-69a86f7fdf8e
 	github.com/ergoapi/util v0.2.16
 	github.com/ergoapi/zlog/v2 v2.0.1
-	github.com/gin-contrib/pprof v1.3.0
-	github.com/gin-gonic/gin v1.8.0
+	github.com/gin-contrib/pprof v1.4.0
+	github.com/gin-gonic/gin v1.8.1
 	github.com/google/gops v0.3.23
 	github.com/prometheus/client_golang v1.12.2
 	github.com/sirupsen/logrus v1.8.1
