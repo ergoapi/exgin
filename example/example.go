@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/ergoapi/exgin"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,8 +21,11 @@ func main() {
 		Gops:    true,
 	}
 	g := exgin.Init(&cfg)
-	g.Use(exgin.ExLTraceID())
-	g.Use(exgin.ExLLog("/metrics"))
-	g.Use(exgin.ExLRecovery())
-	g.Run()
+	g.Use(exgin.ExTraceID())
+	g.Use(exgin.ExLog("/metrics"))
+	g.Use(exgin.ExRecovery())
+	g.GET("/", func(ctx *gin.Context) {
+		exgin.GinsData(ctx, nil, nil)
+	})
+	g.Run(":9999")
 }

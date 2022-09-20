@@ -104,3 +104,11 @@ func Bind(c *gin.Context, ptr interface{}) {
 		errors.Bomb("参数不合法: %v", err)
 	}
 }
+
+// APICustomRespBody swag api resp body
+type APICustomRespBody struct {
+	Code      int         `json:"code"`
+	Data      interface{} `json:"data"`
+	Message   string      `json:"message"`
+	Timestamp int         `json:"timestamp"`
+}
