@@ -55,12 +55,12 @@ func ExCors() gin.HandlerFunc {
 
 func ExTraceID() gin.HandlerFunc {
 	return func(g *gin.Context) {
-		traceId := g.GetHeader("X-Trace-Id")
-		if traceId == "" {
-			traceId = exid.GenUUID()
-			g.Header("X-Trace-Id", traceId)
+		traceID := g.GetHeader("X-Trace-Id")
+		if traceID == "" {
+			traceID = exid.GenUUID()
+			g.Header("X-Trace-Id", traceID)
 		}
-		logrus.AddHook(ltrace.NewTraceIdHook(traceId))
+		logrus.AddHook(ltrace.NewTraceIdHook(traceID))
 		g.Next()
 	}
 }
