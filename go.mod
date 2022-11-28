@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/ergoapi/errors v0.0.1
 	github.com/ergoapi/llog v0.0.1
-	github.com/ergoapi/util v0.2.24
+	github.com/ergoapi/util v0.2.25
 	github.com/gin-contrib/pprof v1.4.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/google/gops v0.3.26
